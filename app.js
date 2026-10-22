@@ -1,3 +1,14 @@
+// Block the requested page shortcuts where the browser permits cancellation.
+document.addEventListener('keydown', (event) => {
+  const isF12 = event.key === 'F12' || event.code === 'F12';
+  const isViewSource = event.ctrlKey && !event.altKey && !event.shiftKey &&
+    (event.code === 'KeyU' || event.key.toLowerCase() === 'u');
+  if (isF12 || isViewSource) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+}, { capture: true });
+
 const image=document.getElementById('imageDialog');
 document.getElementById('expand').addEventListener('click',()=>image.showModal());
 for(const dialog of [image]){
