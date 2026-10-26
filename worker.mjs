@@ -33,7 +33,11 @@ export default {
         lineItem:[{label:'IRAQI TIK '+product.label+' — Lifetime',amount:product.price,type:'increase'}],
         redirectionUrl:url.origin+'/?checkout=return#purchase'})
     });
-    if (!response.ok) return json({error:'تعذّر إنشاء رابط الدفع. رمز استجابة البوابة: '+response.status,code:'WAYL_HTTP_'+response.status},502);
+    if (!response.ok) {
+      const errorText = await response.text();
+      const fields = ['env','referenceId','total','currency','lineItem','customParameter','webhookUrl','webhookSecret','redirectionUrl'].filter(field=>errorText.includes(field));
+      return json({error:'تعذّر إنشاء رابط الدفع. رمز استجابة البوابة: '+response.status+(fields.length?' — '+fields.join(', '):''),code:'WAYL_HTTP_'+response.status,fields},502);
+    }
     stage = 'wayl_response';
     const data = await response.json();
     stage = 'checkout_url';
