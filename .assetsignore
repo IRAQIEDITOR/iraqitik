@@ -1,0 +1,11 @@
+worker.mjs
+wrangler.jsonc
+*.md
+tests/
+.git/
+.github/
+node_modules/
+.wrangler/
+.env*
+.dev.vars*
+package*.json
