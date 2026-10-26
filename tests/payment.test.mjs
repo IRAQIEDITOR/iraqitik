@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../worker.mjs';
-const env={WAYL_API_KEY:'test-secret-not-real',WAYL_PRICE_PC_IQD:'15000',WAYL_PRICE_ANDROID_IQD:'12000'};
+const env={WAYL_ENV:'test',WAYL_API_KEY:'test-secret-not-real',WAYL_PRICE_PC_IQD:'15000',WAYL_PRICE_ANDROID_IQD:'12000'};
 function request(body,origin='https://example.com'){return new Request('https://example.com/api/checkout',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(body)});}
 test('catalog never exposes key and starts in test mode',async()=>{
  const r=await worker.fetch(new Request('https://example.com/api/catalog'),env);const t=await r.text();assert(!t.includes(env.WAYL_API_KEY));assert.equal(JSON.parse(t).test,true);
