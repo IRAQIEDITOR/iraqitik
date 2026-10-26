@@ -20,7 +20,7 @@ async function receiveWebhook(request, env) {
   return new Response(null,{status:204,headers:{'Cache-Control':'no-store'}});
 }
 function catalog(env) {
-  return [['pc','Windows — Upload + Converter',env.WAYL_PRICE_PC_IQD ?? '24000'],['android','Android — Upload',env.WAYL_PRICE_ANDROID_IQD ?? '24000']].map(([id,label,value])=>{
+  return [['pc','بيسي',env.WAYL_PRICE_PC_IQD ?? '24000'],['android','هاتف',env.WAYL_PRICE_ANDROID_IQD ?? '24000']].map(([id,label,value])=>{
     const price = /^\d+$/.test(value || '') ? Number(value) : 0;
     return {id,label,price,available:Boolean(env.WAYL_API_KEY) && Number.isSafeInteger(price) && price > 0};
   });
