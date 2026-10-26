@@ -15,7 +15,7 @@ async function openCheckout(selected){
   for(const p of data.products){
    if(selected && p.id!==selected)continue;
    const button=document.createElement('button');button.className='primary full';
-   button.textContent=p.label+' — '+(p.available?new Intl.NumberFormat('ar-IQ').format(p.price)+' د.ع':'الدفع غير متاح بعد');
+   button.textContent=p.label+' — '+(p.available?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(p.price/1515):'الدفع غير متاح بعد');
    button.disabled=!p.available;
    button.onclick=async()=>{
     if(busy)return;busy=true;list.querySelectorAll('button').forEach(b=>b.disabled=true);message.textContent='جارٍ فتح الدفع…';
