@@ -20,7 +20,7 @@ async function receiveWebhook(request, env) {
   return new Response(null,{status:204,headers:{'Cache-Control':'no-store'}});
 }
 function catalog(env) {
-  return [['pc','بيسي',env.WAYL_PRICE_PC_IQD ?? '24000'],['android','هاتف',env.WAYL_PRICE_ANDROID_IQD ?? '24000']].map(([id,label,value])=>{
+  return [['pc','بيسي','22725'],['android','هاتف','22725']].map(([id,label,value])=>{
     const price = /^\d+$/.test(value || '') ? Number(value) : 0;
     return {id,label,price,available:Boolean(env.WAYL_API_KEY) && Number.isSafeInteger(price) && price > 0};
   });
@@ -29,7 +29,7 @@ export default {
  async fetch(request, env) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
-  if (url.pathname === '/api/catalog' && request.method === 'GET') return json({products:catalog(env),currency:'IQD',test:paymentMode(env) !== 'live',keyConfigured:Boolean(env.WAYL_API_KEY),revision:'checkout-connect-5'});
+  if (url.pathname === '/api/catalog' && request.method === 'GET') return json({products:catalog(env),currency:'IQD',test:paymentMode(env) !== 'live',keyConfigured:Boolean(env.WAYL_API_KEY),revision:'checkout-price-22725-usd'});
   if (url.pathname === '/api/wayl/webhook') return receiveWebhook(request,env);
   if (url.pathname !== '/api/checkout') return json({error:'Not found'},404);
   if (request.method !== 'POST') return json({error:'Method not allowed'},405);
@@ -65,6 +65,7 @@ export default {
     if (!data.data?.url) return json({error:'استجابة بوابة الدفع لم تتضمن رابط الدفع.',code:'WAYL_MISSING_URL'},502);
     const checkout = new URL(data.data.url);
     if (checkout.protocol !== 'https:' || checkout.hostname !== 'checkout.thewayl.com' || checkout.username || checkout.password) return json({error:'رابط دفع غير متوقع. تواصل مع الدعم.'},502);
+    checkout.searchParams.set('currency','usd');
     return json({url:checkout.href,referenceId});
   } catch (err) {
     const kind = ['TimeoutError','AbortError','TypeError','SyntaxError'].includes(err?.name) ? err.name : 'Error';
