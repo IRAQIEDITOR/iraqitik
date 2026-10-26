@@ -1,5 +1,24 @@
 const json = (data, status = 200) => Response.json(data, {status, headers: {'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const paymentMode = env => String(env.WAYL_ENV ?? 'live').trim();
+async function webhookSecret(env) {
+  if (env.WAYL_WEBHOOK_SECRET) return env.WAYL_WEBHOOK_SECRET;
+  const bytes = await crypto.subtle.digest('SHA-256',new TextEncoder().encode('iraqi-tik/webhook/v1:'+env.WAYL_API_KEY));
+  return Array.from(new Uint8Array(bytes), b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function receiveWebhook(request, env) {
+  if (request.method !== 'POST') return json({error:'Method not allowed'},405);
+  if (!env.WAYL_API_KEY) return json({error:'Unavailable'},503);
+  const raw = await request.text();
+  if (raw.length > 65536) return json({error:'Too large'},413);
+  const signature=(request.headers.get('x-wayl-signature-256') || '').replace(/^sha256=/,'');
+  if (!/^[a-fA-F0-9]{64}$/.test(signature)) return json({error:'Invalid signature'},401);
+  const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(await webhookSecret(env)),{name:'HMAC',hash:'SHA-256'},false,['verify']);
+  const bytes=Uint8Array.from(signature.match(/.{2}/g),x=>parseInt(x,16));
+  const valid=await crypto.subtle.verify('HMAC',key,bytes,new TextEncoder().encode(raw));
+  if (!valid) return json({error:'Invalid signature'},401);
+  // Acknowledge authenticated notifications only. Account activation remains manual.
+  return new Response(null,{status:204,headers:{'Cache-Control':'no-store'}});
+}
 function catalog(env) {
   return [['pc','Windows — Upload + Converter',env.WAYL_PRICE_PC_IQD ?? '24000'],['android','Android — Upload',env.WAYL_PRICE_ANDROID_IQD ?? '24000']].map(([id,label,value])=>{
     const price = /^\d+$/.test(value || '') ? Number(value) : 0;
@@ -10,7 +29,8 @@ export default {
  async fetch(request, env) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
-  if (url.pathname === '/api/catalog' && request.method === 'GET') return json({products:catalog(env),currency:'IQD',test:paymentMode(env) !== 'live',keyConfigured:Boolean(env.WAYL_API_KEY),revision:'checkout-connect-3'});
+  if (url.pathname === '/api/catalog' && request.method === 'GET') return json({products:catalog(env),currency:'IQD',test:paymentMode(env) !== 'live',keyConfigured:Boolean(env.WAYL_API_KEY),revision:'checkout-connect-5'});
+  if (url.pathname === '/api/wayl/webhook') return receiveWebhook(request,env);
   if (url.pathname !== '/api/checkout') return json({error:'Not found'},404);
   if (request.method !== 'POST') return json({error:'Method not allowed'},405);
   if (request.headers.get('Origin') !== url.origin) return json({error:'Forbidden'},403);
@@ -31,6 +51,7 @@ export default {
       headers:{'Content-Type':'application/json','X-WAYL-AUTHENTICATION':env.WAYL_API_KEY},
       body:JSON.stringify({env:paymentMode(env) === 'live' ? 'live':'test',referenceId,total:product.price,currency:'IQD',
         lineItem:[{label:'IRAQI TIK '+product.label+' — Lifetime',amount:product.price,type:'increase'}],
+        webhookUrl:url.origin+'/api/wayl/webhook',webhookSecret:await webhookSecret(env),
         redirectionUrl:url.origin+'/?checkout=return#purchase'})
     });
     if (!response.ok) {
